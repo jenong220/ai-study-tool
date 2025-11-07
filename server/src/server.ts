@@ -59,7 +59,7 @@ app.get('/api/health', (req: express.Request, res: express.Response) => {
 // Error handling
 app.use(errorHandler);
 
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running on port ${PORT}`);
 });
 
