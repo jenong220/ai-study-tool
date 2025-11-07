@@ -6,12 +6,14 @@ interface FlashcardQuestionProps {
   question: Question;
   userAnswer?: string;
   onAnswer: (rating: string) => void;
+  onAnswerSelected?: () => void; // Callback for auto-navigation
 }
 
 export default function FlashcardQuestion({
   question,
   userAnswer,
   onAnswer,
+  onAnswerSelected,
 }: FlashcardQuestionProps) {
   const [showAnswer, setShowAnswer] = useState(false);
   const [rating, setRating] = useState<string | null>(userAnswer || null);
@@ -25,6 +27,13 @@ export default function FlashcardQuestion({
   const handleRating = (rate: string) => {
     setRating(rate);
     onAnswer(rate);
+    
+    // Auto-navigate to next question after a short delay
+    if (onAnswerSelected) {
+      setTimeout(() => {
+        onAnswerSelected();
+      }, 1500); // 1.5 second delay
+    }
   };
 
   return (
@@ -60,18 +69,28 @@ export default function FlashcardQuestion({
 
           <div className="flex gap-4 justify-center">
             <Button
-              variant={rating === 'CORRECT' ? 'default' : 'outline'}
+              variant="outline"
               onClick={() => handleRating('CORRECT')}
-              className="min-w-[120px] bg-green-600 hover:bg-green-700 text-white"
-              style={rating === 'CORRECT' ? {} : { borderColor: '#10B981', color: '#10B981' }}
+              className="min-w-[120px]"
+              style={
+                rating === 'CORRECT'
+                  ? { backgroundColor: '#10B981', color: 'white', borderColor: '#10B981' }
+                  : {}
+              }
+              disabled={rating !== null && rating !== 'CORRECT'}
             >
               ✓ Got it Right
             </Button>
             <Button
-              variant={rating === 'INCORRECT' ? 'default' : 'outline'}
+              variant="outline"
               onClick={() => handleRating('INCORRECT')}
-              className="min-w-[120px] bg-red-600 hover:bg-red-700 text-white"
-              style={rating === 'INCORRECT' ? {} : { borderColor: '#EF4444', color: '#EF4444' }}
+              className="min-w-[120px]"
+              style={
+                rating === 'INCORRECT'
+                  ? { backgroundColor: '#EF4444', color: 'white', borderColor: '#EF4444' }
+                  : {}
+              }
+              disabled={rating !== null && rating !== 'INCORRECT'}
             >
               ✗ Got it Wrong
             </Button>

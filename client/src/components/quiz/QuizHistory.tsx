@@ -55,7 +55,11 @@ export default function QuizHistory({ quizzes }: QuizHistoryProps) {
                   )}
                 </div>
                 <div className="text-sm text-gray-600">
-                  {quiz.questionCount} questions
+                  {!quiz.completedAt && quiz.answeredCount !== undefined && quiz.answeredCount > 0 ? (
+                    <span>{quiz.answeredCount} / {quiz.questionCount} answered</span>
+                  ) : (
+                    <span>{quiz.questionCount} questions</span>
+                  )}
                   {quiz.topicFocus && ` • ${quiz.topicFocus}`}
                 </div>
                 <div className="text-xs text-gray-500 mt-1">

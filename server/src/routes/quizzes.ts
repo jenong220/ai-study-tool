@@ -37,17 +37,28 @@ router.get('/:courseId/quizzes', async (req: Request, res: Response, next: NextF
             questions: true,
           },
         },
+        questions: {
+          select: {
+            id: true,
+            userAnswer: true,
+          },
+        },
       },
       orderBy: {
         createdAt: 'desc',
       },
     });
 
-    // Parse JSON strings for SQLite compatibility
-    const parsedQuizzes = quizzes.map((quiz: any) => ({
-      ...quiz,
-      materialIds: quiz.materialIds ? JSON.parse(quiz.materialIds) : [],
-    }));
+    // Parse JSON strings and calculate progress for incomplete quizzes
+    const parsedQuizzes = quizzes.map((quiz: any) => {
+      const answeredCount = quiz.questions ? quiz.questions.filter((q: any) => q.userAnswer !== null && q.userAnswer !== undefined).length : 0;
+      const { questions, ...quizWithoutQuestions } = quiz; // Remove questions from response
+      return {
+        ...quizWithoutQuestions,
+        materialIds: quiz.materialIds ? JSON.parse(quiz.materialIds) : [],
+        answeredCount, // Add answered count for incomplete quizzes
+      };
+    });
 
     res.json(parsedQuizzes);
   } catch (error) {

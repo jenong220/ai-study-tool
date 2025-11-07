@@ -29,6 +29,20 @@ export default function CourseDetail() {
     }
   }, [id]);
 
+  // Refresh quiz history when page becomes visible (user returns from quiz)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && id) {
+        loadQuizHistory();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [id]);
+
   const loadCourse = async () => {
     try {
       const response = await courses.getById(id!);

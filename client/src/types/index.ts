@@ -51,6 +51,7 @@ export interface Quiz {
   completedAt?: string;
   score?: number;
   timeSpent?: number;
+  answeredCount?: number; // Number of answered questions for incomplete quizzes
   questions?: Question[];
   course?: {
     id: string;
