@@ -1,7 +1,20 @@
 import axios from 'axios';
 
+// Ensure baseURL always ends with /api
+const getBaseURL = () => {
+  const envUrl = import.meta.env.VITE_API_URL;
+  if (envUrl) {
+    // If VITE_API_URL is set, use it (should include /api)
+    return envUrl.endsWith('/api') ? envUrl : `${envUrl}/api`;
+  }
+  // Fallback URLs
+  return import.meta.env.PROD 
+    ? 'https://study-tool-backend.onrender.com/api' 
+    : 'http://localhost:3001/api';
+};
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || (import.meta.env.PROD ? 'https://study-tool-backend.onrender.com/api' : 'http://localhost:3001/api'),
+  baseURL: getBaseURL(),
   withCredentials: true,
 });
 
