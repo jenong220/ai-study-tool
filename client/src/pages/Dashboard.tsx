@@ -43,10 +43,13 @@ export default function Dashboard() {
             <Button 
               type="button"
               variant="outline" 
-              onClick={() => {
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
                 logout();
                 navigate('/register');
               }}
+              style={{ cursor: 'pointer', zIndex: 1000, position: 'relative' }}
             >
               Logout
             </Button>
