@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { authenticateToken, AuthRequest } from '../middleware/auth';
 
@@ -9,11 +9,12 @@ const prisma = new PrismaClient();
 router.use(authenticateToken);
 
 // Get all courses for user
-router.get('/', async (req: AuthRequest, res, next) => {
+router.get('/', async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
+    const authReq = req as AuthRequest;
     const courses = await prisma.course.findMany({
       where: {
-        userId: req.userId!,
+        userId: authReq.userId!,
         archived: false,
       },
       include: {
@@ -36,29 +37,32 @@ router.get('/', async (req: AuthRequest, res, next) => {
 });
 
 // Create course
-router.post('/', async (req: AuthRequest, res, next) => {
+router.post('/', async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
+    const authReq = req as AuthRequest;
     const { name, description, color, icon } = req.body;
 
     if (!name) {
-      return res.status(400).json({ error: 'Course name is required' });
+      res.status(400).json({ error: 'Course name is required' });
+      return;
     }
 
     // Check course limit (15)
     const courseCount = await prisma.course.count({
       where: {
-        userId: req.userId!,
+        userId: authReq.userId!,
         archived: false,
       },
     });
 
     if (courseCount >= 15) {
-      return res.status(400).json({ error: 'Maximum of 15 courses allowed' });
+      res.status(400).json({ error: 'Maximum of 15 courses allowed' });
+      return;
     }
 
     const course = await prisma.course.create({
       data: {
-        userId: req.userId!,
+        userId: authReq.userId!,
         name,
         description,
         color: color || '#3B82F6',
@@ -73,12 +77,13 @@ router.post('/', async (req: AuthRequest, res, next) => {
 });
 
 // Get course by ID
-router.get('/:id', async (req: AuthRequest, res, next) => {
+router.get('/:id', async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
+    const authReq = req as AuthRequest;
     const course = await prisma.course.findFirst({
       where: {
         id: req.params.id,
-        userId: req.userId!,
+        userId: authReq.userId!,
       },
       include: {
         materials: {
@@ -95,7 +100,8 @@ router.get('/:id', async (req: AuthRequest, res, next) => {
     });
 
     if (!course) {
-      return res.status(404).json({ error: 'Course not found' });
+      res.status(404).json({ error: 'Course not found' });
+      return;
     }
 
     res.json(course);
@@ -105,19 +111,21 @@ router.get('/:id', async (req: AuthRequest, res, next) => {
 });
 
 // Update course
-router.put('/:id', async (req: AuthRequest, res, next) => {
+router.put('/:id', async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
+    const authReq = req as AuthRequest;
     const { name, description, color, icon, archived } = req.body;
 
     const course = await prisma.course.findFirst({
       where: {
         id: req.params.id,
-        userId: req.userId!,
+        userId: authReq.userId!,
       },
     });
 
     if (!course) {
-      return res.status(404).json({ error: 'Course not found' });
+      res.status(404).json({ error: 'Course not found' });
+      return;
     }
 
     const updated = await prisma.course.update({
@@ -138,17 +146,19 @@ router.put('/:id', async (req: AuthRequest, res, next) => {
 });
 
 // Delete course
-router.delete('/:id', async (req: AuthRequest, res, next) => {
+router.delete('/:id', async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
+    const authReq = req as AuthRequest;
     const course = await prisma.course.findFirst({
       where: {
         id: req.params.id,
-        userId: req.userId!,
+        userId: authReq.userId!,
       },
     });
 
     if (!course) {
-      return res.status(404).json({ error: 'Course not found' });
+      res.status(404).json({ error: 'Course not found' });
+      return;
     }
 
     await prisma.course.delete({

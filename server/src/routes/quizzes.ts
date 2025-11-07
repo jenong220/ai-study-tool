@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { authenticateToken, AuthRequest } from '../middleware/auth';
 import { createQuiz, submitQuizAnswers } from '../services/quiz.service';
@@ -10,24 +10,26 @@ const prisma = new PrismaClient();
 router.use(authenticateToken);
 
 // Get all quizzes for a course
-router.get('/:courseId/quizzes', async (req: AuthRequest, res, next) => {
+router.get('/:courseId/quizzes', async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
+    const authReq = req as AuthRequest;
     // Verify course belongs to user
     const course = await prisma.course.findFirst({
       where: {
         id: req.params.courseId,
-        userId: req.userId!,
+        userId: authReq.userId!,
       },
     });
 
     if (!course) {
-      return res.status(404).json({ error: 'Course not found' });
+      res.status(404).json({ error: 'Course not found' });
+      return;
     }
 
     const quizzes = await prisma.quiz.findMany({
       where: {
         courseId: req.params.courseId,
-        userId: req.userId!,
+        userId: authReq.userId!,
       },
       include: {
         _count: {
@@ -54,35 +56,39 @@ router.get('/:courseId/quizzes', async (req: AuthRequest, res, next) => {
 });
 
 // Generate quiz
-router.post('/:courseId/quizzes/generate', async (req: AuthRequest, res, next) => {
+router.post('/:courseId/quizzes/generate', async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
+    const authReq = req as AuthRequest;
     const { quizType, difficulty, questionCount, topicFocus, materialIds } = req.body;
 
     // Validate input
     if (!quizType || !difficulty || !questionCount) {
-      return res.status(400).json({ error: 'quizType, difficulty, and questionCount are required' });
+      res.status(400).json({ error: 'quizType, difficulty, and questionCount are required' });
+      return;
     }
 
     if (questionCount < 5 || questionCount > 25) {
-      return res.status(400).json({ error: 'questionCount must be between 5 and 25' });
+      res.status(400).json({ error: 'questionCount must be between 5 and 25' });
+      return;
     }
 
     // Verify course belongs to user
     const course = await prisma.course.findFirst({
       where: {
         id: req.params.courseId,
-        userId: req.userId!,
+        userId: authReq.userId!,
       },
     });
 
     if (!course) {
-      return res.status(404).json({ error: 'Course not found' });
+      res.status(404).json({ error: 'Course not found' });
+      return;
     }
 
     // Create quiz
     const { quiz, questions } = await createQuiz(
       req.params.courseId,
-      req.userId!,
+      authReq.userId!,
       quizType,
       difficulty,
       questionCount,
@@ -95,25 +101,29 @@ router.post('/:courseId/quizzes/generate', async (req: AuthRequest, res, next) =
     console.error('Quiz generation error:', error);
     // Return more specific error messages
     if (error.message?.includes('No materials')) {
-      return res.status(400).json({ error: 'No materials found. Please upload materials to your course first.' });
+      res.status(400).json({ error: 'No materials found. Please upload materials to your course first.' });
+      return;
     }
     if (error.message?.includes('No content')) {
-      return res.status(400).json({ error: 'Materials have no extractable content. Please ensure your PDF/DOCX files contain text.' });
+      res.status(400).json({ error: 'Materials have no extractable content. Please ensure your PDF/DOCX files contain text.' });
+      return;
     }
     if (error.message?.includes('API key')) {
-      return res.status(500).json({ error: error.message });
+      res.status(500).json({ error: error.message });
+      return;
     }
     next(error as Error);
   }
 });
 
 // Get quiz by ID
-router.get('/:id', async (req: AuthRequest, res, next) => {
+router.get('/:id', async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
+    const authReq = req as AuthRequest;
     const quiz = await prisma.quiz.findFirst({
       where: {
         id: req.params.id,
-        userId: req.userId!,
+        userId: authReq.userId!,
       },
       include: {
         questions: {
@@ -131,7 +141,8 @@ router.get('/:id', async (req: AuthRequest, res, next) => {
     });
 
     if (!quiz) {
-      return res.status(404).json({ error: 'Quiz not found' });
+      res.status(404).json({ error: 'Quiz not found' });
+      return;
     }
 
     // Parse JSON strings for SQLite compatibility
@@ -151,17 +162,19 @@ router.get('/:id', async (req: AuthRequest, res, next) => {
 });
 
 // Submit quiz answers
-router.post('/:id/submit', async (req: AuthRequest, res, next) => {
+router.post('/:id/submit', async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
+    const authReq = req as AuthRequest;
     const { answers, timeSpent } = req.body;
 
     if (!answers || typeof timeSpent !== 'number') {
-      return res.status(400).json({ error: 'answers and timeSpent are required' });
+      res.status(400).json({ error: 'answers and timeSpent are required' });
+      return;
     }
 
     const result = await submitQuizAnswers(
       req.params.id,
-      req.userId!,
+      authReq.userId!,
       answers,
       timeSpent
     );
@@ -173,12 +186,13 @@ router.post('/:id/submit', async (req: AuthRequest, res, next) => {
 });
 
 // Get quiz results
-router.get('/:id/results', async (req: AuthRequest, res, next) => {
+router.get('/:id/results', async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
+    const authReq = req as AuthRequest;
     const quiz = await prisma.quiz.findFirst({
       where: {
         id: req.params.id,
-        userId: req.userId!,
+        userId: authReq.userId!,
       },
       include: {
         questions: {
@@ -196,7 +210,8 @@ router.get('/:id/results', async (req: AuthRequest, res, next) => {
     });
 
     if (!quiz) {
-      return res.status(404).json({ error: 'Quiz not found' });
+      res.status(404).json({ error: 'Quiz not found' });
+      return;
     }
 
     // Parse JSON strings for SQLite compatibility

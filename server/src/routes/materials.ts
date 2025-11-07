@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import { PrismaClient } from '@prisma/client';
 import multer from 'multer';
 import path from 'path';
@@ -43,18 +43,20 @@ const upload = multer({
 });
 
 // Get all materials for a course
-router.get('/:courseId/materials', async (req: AuthRequest, res, next) => {
+router.get('/:courseId/materials', async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
+    const authReq = req as AuthRequest;
     // Verify course belongs to user
     const course = await prisma.course.findFirst({
       where: {
         id: req.params.courseId,
-        userId: req.userId!,
+        userId: authReq.userId!,
       },
     });
 
     if (!course) {
-      return res.status(404).json({ error: 'Course not found' });
+      res.status(404).json({ error: 'Course not found' });
+      return;
     }
 
     const materials = await prisma.material.findMany({
@@ -73,49 +75,53 @@ router.get('/:courseId/materials', async (req: AuthRequest, res, next) => {
 });
 
 // Upload file material
-router.post('/:courseId/materials/upload', upload.single('file'), async (req: AuthRequest, res, next) => {
+router.post('/:courseId/materials/upload', upload.single('file'), async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    if (!req.file) {
-      return res.status(400).json({ error: 'File is required' });
+    const authReq = req as AuthRequest;
+    if (!authReq.file) {
+      res.status(400).json({ error: 'File is required' });
+      return;
     }
 
     // Verify course belongs to user
     const course = await prisma.course.findFirst({
       where: {
         id: req.params.courseId,
-        userId: req.userId!,
+        userId: authReq.userId!,
       },
     });
 
     if (!course) {
       // Clean up uploaded file
-      fs.unlinkSync(req.file.path);
-      return res.status(404).json({ error: 'Course not found' });
+      fs.unlinkSync(authReq.file.path);
+      res.status(404).json({ error: 'Course not found' });
+      return;
     }
 
     // Check material limit (50 per user)
     const materialCount = await prisma.material.count({
       where: {
         course: {
-          userId: req.userId!,
+          userId: authReq.userId!,
         },
       },
     });
 
     if (materialCount >= 50) {
-      fs.unlinkSync(req.file.path);
-      return res.status(400).json({ error: 'Maximum of 50 materials allowed' });
+      fs.unlinkSync(authReq.file.path);
+      res.status(400).json({ error: 'Maximum of 50 materials allowed' });
+      return;
     }
 
     // Extract text based on file type
     let contentText = '';
-    const ext = path.extname(req.file.originalname).toLowerCase();
+    const ext = path.extname(authReq.file.originalname).toLowerCase();
 
     try {
       if (ext === '.pdf') {
-        contentText = await extractTextFromPDF(req.file.path);
+        contentText = await extractTextFromPDF(authReq.file.path);
       } else if (ext === '.docx') {
-        contentText = await extractTextFromDOCX(req.file.path);
+        contentText = await extractTextFromDOCX(authReq.file.path);
       }
 
       const wordCount = contentText.split(/\s+/).filter(word => word.length > 0).length;
@@ -124,12 +130,12 @@ router.post('/:courseId/materials/upload', upload.single('file'), async (req: Au
         data: {
           courseId: req.params.courseId,
           type: ext === '.pdf' ? 'PDF' : 'DOCX',
-          name: req.body.name || req.file.originalname,
-          originalFilename: req.file.originalname,
-          storagePath: req.file.path,
+          name: req.body.name || authReq.file.originalname,
+          originalFilename: authReq.file.originalname,
+          storagePath: authReq.file.path,
           contentText,
           wordCount,
-          fileSize: req.file.size,
+          fileSize: authReq.file.size,
           customTags: null, // Initialize as null for SQLite
           metadata: null, // Initialize as null for SQLite
         },
@@ -137,19 +143,22 @@ router.post('/:courseId/materials/upload', upload.single('file'), async (req: Au
 
       res.status(201).json(material);
     } catch (parseError: any) {
-      fs.unlinkSync(req.file.path);
+      fs.unlinkSync(authReq.file.path);
       console.error('File parsing error:', parseError);
-      return res.status(500).json({ 
+      res.status(500).json({ 
         error: `Failed to extract text from file: ${parseError.message || 'Unknown error'}` 
       });
+      return;
     }
   } catch (error: any) {
     // Handle multer errors
     if (error.code === 'LIMIT_FILE_SIZE') {
-      return res.status(400).json({ error: 'File size exceeds 10MB limit' });
+      res.status(400).json({ error: 'File size exceeds 10MB limit' });
+      return;
     }
     if (error.message && error.message.includes('Only PDF and DOCX')) {
-      return res.status(400).json({ error: error.message });
+      res.status(400).json({ error: error.message });
+      return;
     }
     console.error('Upload error:', error);
     next(error as Error);
@@ -157,37 +166,41 @@ router.post('/:courseId/materials/upload', upload.single('file'), async (req: Au
 });
 
 // Add URL material
-router.post('/:courseId/materials/url', async (req: AuthRequest, res, next) => {
+router.post('/:courseId/materials/url', async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
+    const authReq = req as AuthRequest;
     const { url, name } = req.body;
 
     if (!url) {
-      return res.status(400).json({ error: 'URL is required' });
+      res.status(400).json({ error: 'URL is required' });
+      return;
     }
 
     // Verify course belongs to user
     const course = await prisma.course.findFirst({
       where: {
         id: req.params.courseId,
-        userId: req.userId!,
+        userId: authReq.userId!,
       },
     });
 
     if (!course) {
-      return res.status(404).json({ error: 'Course not found' });
+      res.status(404).json({ error: 'Course not found' });
+      return;
     }
 
     // Check material limit
     const materialCount = await prisma.material.count({
       where: {
         course: {
-          userId: req.userId!,
+          userId: authReq.userId!,
         },
       },
     });
 
     if (materialCount >= 50) {
-      return res.status(400).json({ error: 'Maximum of 50 materials allowed' });
+      res.status(400).json({ error: 'Maximum of 50 materials allowed' });
+      return;
     }
 
     // Scrape content
@@ -213,21 +226,23 @@ router.post('/:courseId/materials/url', async (req: AuthRequest, res, next) => {
 });
 
 // Update material
-router.put('/materials/:id', async (req: AuthRequest, res, next) => {
+router.put('/materials/:id', async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
+    const authReq = req as AuthRequest;
     const { name, priority, customTags } = req.body;
 
     const material = await prisma.material.findFirst({
       where: {
         id: req.params.id,
         course: {
-          userId: req.userId!,
+          userId: authReq.userId!,
         },
       },
     });
 
     if (!material) {
-      return res.status(404).json({ error: 'Material not found' });
+      res.status(404).json({ error: 'Material not found' });
+      return;
     }
 
     const updated = await prisma.material.update({
@@ -246,19 +261,21 @@ router.put('/materials/:id', async (req: AuthRequest, res, next) => {
 });
 
 // Delete material
-router.delete('/materials/:id', async (req: AuthRequest, res, next) => {
+router.delete('/materials/:id', async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
+    const authReq = req as AuthRequest;
     const material = await prisma.material.findFirst({
       where: {
         id: req.params.id,
         course: {
-          userId: req.userId!,
+          userId: authReq.userId!,
         },
       },
     });
 
     if (!material) {
-      return res.status(404).json({ error: 'Material not found' });
+      res.status(404).json({ error: 'Material not found' });
+      return;
     }
 
     // Delete file if it exists

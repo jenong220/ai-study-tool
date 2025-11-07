@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { authenticateToken, AuthRequest } from '../middleware/auth';
 
@@ -9,18 +9,20 @@ const prisma = new PrismaClient();
 router.use(authenticateToken);
 
 // Get analytics for a course
-router.get('/courses/:courseId', async (req: AuthRequest, res, next) => {
+router.get('/courses/:courseId', async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
+    const authReq = req as AuthRequest;
     // Verify course belongs to user
     const course = await prisma.course.findFirst({
       where: {
         id: req.params.courseId,
-        userId: req.userId!,
+        userId: authReq.userId!,
       },
     });
 
     if (!course) {
-      return res.status(404).json({ error: 'Course not found' });
+      res.status(404).json({ error: 'Course not found' });
+      return;
     }
 
     // Get analytics for last 30 days
@@ -30,7 +32,7 @@ router.get('/courses/:courseId', async (req: AuthRequest, res, next) => {
     const analytics = await prisma.analytics.findMany({
       where: {
         courseId: req.params.courseId,
-        userId: req.userId!,
+        userId: authReq.userId!,
         date: {
           gte: thirtyDaysAgo,
         },
@@ -47,14 +49,15 @@ router.get('/courses/:courseId', async (req: AuthRequest, res, next) => {
 });
 
 // Get user-wide analytics
-router.get('/summary', async (req: AuthRequest, res, next) => {
+router.get('/summary', async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
+    const authReq = req as AuthRequest;
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
     const analytics = await prisma.analytics.findMany({
       where: {
-        userId: req.userId!,
+        userId: authReq.userId!,
         date: {
           gte: thirtyDaysAgo,
         },

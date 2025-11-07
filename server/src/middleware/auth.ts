@@ -3,10 +3,12 @@ import jwt from 'jsonwebtoken';
 
 export interface AuthRequest extends Request {
   userId?: string;
+  file?: Express.Multer.File;
+  files?: Express.Multer.File[];
 }
 
 export const authenticateToken = (
-  req: AuthRequest,
+  req: Request,
   res: Response,
   next: NextFunction
 ) => {
@@ -19,7 +21,7 @@ export const authenticateToken = (
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET!) as { userId: string };
-    req.userId = decoded.userId;
+    (req as AuthRequest).userId = decoded.userId;
     next();
   } catch (error) {
     return res.status(403).json({ error: 'Invalid or expired token' });

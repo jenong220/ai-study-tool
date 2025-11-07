@@ -37,7 +37,7 @@ app.use('/api/quizzes', quizRoutes); // Also mount at /api/quizzes for direct qu
 app.use('/api/analytics', analyticsRoutes);
 
 // Health check
-app.get('/api/health', (req, res) => {
+app.get('/api/health', (req: express.Request, res: express.Response) => {
   res.json({ status: 'ok' });
 });
 
