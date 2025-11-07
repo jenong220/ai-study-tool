@@ -36,6 +36,21 @@ app.use('/api/courses', quizRoutes); // Quiz routes are nested under courses
 app.use('/api/quizzes', quizRoutes); // Also mount at /api/quizzes for direct quiz access
 app.use('/api/analytics', analyticsRoutes);
 
+// Root route
+app.get('/', (req: express.Request, res: express.Response) => {
+  res.json({ 
+    message: 'AI Study Tool API',
+    version: '1.0.0',
+    endpoints: {
+      health: '/api/health',
+      auth: '/api/auth',
+      courses: '/api/courses',
+      quizzes: '/api/quizzes',
+      analytics: '/api/analytics'
+    }
+  });
+});
+
 // Health check
 app.get('/api/health', (req: express.Request, res: express.Response) => {
   res.json({ status: 'ok' });
