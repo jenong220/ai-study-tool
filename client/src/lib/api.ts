@@ -83,6 +83,8 @@ export const quizzes = {
   generate: (courseId: string, config: any) =>
     api.post(`/courses/${courseId}/quizzes/generate`, config),
   getById: (id: string) => api.get(`/quizzes/${id}`),
+  saveProgress: (id: string, answers: any) =>
+    api.post(`/quizzes/${id}/save-progress`, { answers }),
   submit: (id: string, answers: any, timeSpent: number) =>
     api.post(`/quizzes/${id}/submit`, { answers, timeSpent }),
   getResults: (id: string) => api.get(`/quizzes/${id}/results`),

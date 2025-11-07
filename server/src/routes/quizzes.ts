@@ -161,6 +161,59 @@ router.get('/:id', async (req: Request, res: Response, next: NextFunction): Prom
   }
 });
 
+// Save quiz progress (without completing)
+router.post('/:id/save-progress', async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const authReq = req as AuthRequest;
+    const { answers } = req.body;
+
+    if (!answers) {
+      res.status(400).json({ error: 'answers are required' });
+      return;
+    }
+
+    // Get quiz with questions
+    const quiz = await prisma.quiz.findFirst({
+      where: {
+        id: req.params.id,
+        userId: authReq.userId!,
+      },
+      include: {
+        questions: true,
+      },
+    });
+
+    if (!quiz) {
+      res.status(404).json({ error: 'Quiz not found' });
+      return;
+    }
+
+    // Don't allow saving progress if quiz is already completed
+    if (quiz.completedAt) {
+      res.status(400).json({ error: 'Cannot save progress for completed quiz' });
+      return;
+    }
+
+    // Save answers without marking as complete
+    for (const question of quiz.questions) {
+      const userAnswer = answers[question.id];
+      if (userAnswer !== undefined) {
+        await prisma.question.update({
+          where: { id: question.id },
+          data: {
+            userAnswer,
+            // Don't set answeredCorrectly or completedAt yet
+          },
+        });
+      }
+    }
+
+    res.json({ message: 'Progress saved successfully' });
+  } catch (error) {
+    next(error as Error);
+  }
+});
+
 // Submit quiz answers
 router.post('/:id/submit', async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {

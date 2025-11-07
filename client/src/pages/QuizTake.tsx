@@ -5,6 +5,7 @@ import { quizzes } from '../lib/api';
 import { Quiz, Question } from '../types';
 import { Button } from '../components/ui/button';
 import { Card, CardContent } from '../components/ui/card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../components/ui/dialog';
 import MultipleChoiceQuestion from '../components/quiz/MultipleChoiceQuestion';
 import FlashcardQuestion from '../components/quiz/FlashcardQuestion';
 
@@ -16,6 +17,7 @@ export default function QuizTake() {
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [startTime] = useState(Date.now());
   const [loading, setLoading] = useState(true);
+  const [showExitDialog, setShowExitDialog] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -31,15 +33,29 @@ export default function QuizTake() {
       // For completed quizzes (retakes), start fresh with empty answers
       if (response.data.questions && !response.data.completedAt) {
         const existingAnswers: Record<string, string> = {};
-        response.data.questions.forEach((q: Question) => {
+        let lastAnsweredIndex = 0;
+        response.data.questions.forEach((q: Question, index: number) => {
           if (q.userAnswer) {
             existingAnswers[q.id] = q.userAnswer;
+            lastAnsweredIndex = index;
           }
         });
         setAnswers(existingAnswers);
+        // Resume at the first unanswered question, or the last answered question if all are answered
+        if (Object.keys(existingAnswers).length < response.data.questions.length) {
+          // Find first unanswered question
+          const firstUnanswered = response.data.questions.findIndex((q: Question) => !q.userAnswer);
+          if (firstUnanswered !== -1) {
+            setCurrentIndex(firstUnanswered);
+          }
+        } else {
+          // All questions answered, start at last question
+          setCurrentIndex(lastAnsweredIndex);
+        }
       } else {
         // Clear answers for retakes
         setAnswers({});
+        setCurrentIndex(0);
       }
     } catch (error: any) {
       console.error('Failed to load quiz:', error);
@@ -91,6 +107,27 @@ export default function QuizTake() {
     setCurrentIndex((prev) => prev - 1);
   };
 
+  const handleExit = async () => {
+    if (!quiz || !id) return;
+
+    // Save progress before exiting
+    try {
+      if (Object.keys(answers).length > 0) {
+        await quizzes.saveProgress(id, answers);
+      }
+    } catch (error: any) {
+      console.error('Failed to save progress:', error);
+      // Continue with exit even if save fails
+    }
+
+    // Navigate back to course detail page
+    if (quiz.courseId) {
+      navigate(`/courses/${quiz.courseId}`);
+    } else {
+      navigate('/dashboard');
+    }
+  };
+
   const handleSubmit = async () => {
     if (!quiz || !id || !quiz.questions) return;
 
@@ -133,8 +170,18 @@ export default function QuizTake() {
                 <p className="text-sm text-blue-600 mt-1">Retaking quiz - Previous score: {quiz.score ? Math.round(quiz.score) : 'N/A'}%</p>
               )}
             </div>
-            <div className="text-sm text-gray-600">
-              {answeredCount} / {quiz.questions.length} answered
+            <div className="flex items-center gap-4">
+              <div className="text-sm text-gray-600">
+                {answeredCount} / {quiz.questions.length} answered
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowExitDialog(true)}
+                style={{ cursor: 'pointer' }}
+              >
+                Exit Quiz
+              </Button>
             </div>
           </div>
         </div>
@@ -208,6 +255,34 @@ export default function QuizTake() {
           )}
         </div>
       </div>
+
+      {/* Exit Confirmation Dialog */}
+      <Dialog open={showExitDialog} onOpenChange={setShowExitDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Exit Quiz?</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to exit this quiz? Your progress will be saved, and you can resume later.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-3 mt-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setShowExitDialog(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={handleExit}
+            >
+              Exit Quiz
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

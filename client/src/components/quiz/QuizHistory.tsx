@@ -86,7 +86,7 @@ export default function QuizHistory({ quizzes }: QuizHistoryProps) {
                     }
                   }}
                 >
-                  {quiz.completedAt ? 'View Results' : 'Continue'}
+                  {quiz.completedAt ? 'View Results' : 'Resume'}
                 </Button>
               </div>
             </div>
