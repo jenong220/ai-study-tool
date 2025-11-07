@@ -1,19 +1,18 @@
 import { Material } from '../../types';
-import { materials } from '../../lib/api';
+import { materials as materialsApi } from '../../lib/api';
 import { Button } from '../ui/button';
 
 interface MaterialListProps {
   materials: Material[];
   onDelete: () => void;
-  onUpdate: () => void;
 }
 
-export default function MaterialList({ materials, onDelete, onUpdate }: MaterialListProps) {
+export default function MaterialList({ materials, onDelete }: MaterialListProps) {
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this material?')) return;
 
     try {
-      await materials.delete(id);
+      await materialsApi.delete(id);
       onDelete();
     } catch (error) {
       alert('Failed to delete material');

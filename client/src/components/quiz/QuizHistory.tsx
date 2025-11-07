@@ -1,6 +1,6 @@
 import { Quiz } from '../../types';
 import { useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
+import { Card, CardContent } from '../ui/card';
 import { Button } from '../ui/button';
 import { formatTime } from '../../lib/utils';
 
@@ -63,7 +63,7 @@ export default function QuizHistory({ quizzes }: QuizHistoryProps) {
                 </div>
               </div>
               <div className="text-right ml-4">
-                {quiz.completedAt && quiz.score !== null && (
+                {quiz.completedAt && quiz.score !== null && quiz.score !== undefined && (
                   <div className="mb-2">
                     <div className="text-2xl font-bold" style={{ color: quiz.score >= 70 ? '#10B981' : '#EF4444' }}>
                       {Math.round(quiz.score)}%

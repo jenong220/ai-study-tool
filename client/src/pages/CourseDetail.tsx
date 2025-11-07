@@ -156,7 +156,6 @@ export default function CourseDetail() {
                 <MaterialList
                   materials={materialsList}
                   onDelete={loadMaterials}
-                  onUpdate={loadMaterials}
                 />
               </CardContent>
             </Card>

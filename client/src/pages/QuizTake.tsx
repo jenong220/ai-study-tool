@@ -4,10 +4,9 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { quizzes } from '../lib/api';
 import { Quiz, Question } from '../types';
 import { Button } from '../components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
+import { Card, CardContent } from '../components/ui/card';
 import MultipleChoiceQuestion from '../components/quiz/MultipleChoiceQuestion';
 import FlashcardQuestion from '../components/quiz/FlashcardQuestion';
-import { formatTime } from '../lib/utils';
 
 export default function QuizTake() {
   const { id } = useParams<{ id: string }>();
@@ -93,7 +92,7 @@ export default function QuizTake() {
   };
 
   const handleSubmit = async () => {
-    if (!quiz || !id) return;
+    if (!quiz || !id || !quiz.questions) return;
 
     if (Object.keys(answers).length < quiz.questions.length) {
       if (!confirm('You have not answered all questions. Submit anyway?')) {
