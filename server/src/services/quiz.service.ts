@@ -117,7 +117,15 @@ export async function submitQuizAnswers(
 
   for (const question of quiz.questions) {
     const userAnswer = answers[question.id];
-    const isCorrect = userAnswer === question.correctAnswer;
+    let isCorrect: boolean;
+
+    // For flashcard quizzes, check if user selected "CORRECT" or "INCORRECT"
+    if (quiz.quizType === 'FLASHCARD') {
+      isCorrect = userAnswer === 'CORRECT';
+    } else {
+      // For multiple choice, compare with correct answer
+      isCorrect = userAnswer === question.correctAnswer;
+    }
 
     if (isCorrect) {
       correctCount++;

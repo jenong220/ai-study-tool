@@ -58,17 +58,23 @@ export default function FlashcardQuestion({
             )}
           </div>
 
-          <div className="flex gap-2 justify-center">
-            {(['Again', 'Hard', 'Good', 'Easy'] as const).map((rate) => (
-              <Button
-                key={rate}
-                variant={rating === rate ? 'default' : 'outline'}
-                onClick={() => handleRating(rate)}
-                className="min-w-[80px]"
-              >
-                {rate}
-              </Button>
-            ))}
+          <div className="flex gap-4 justify-center">
+            <Button
+              variant={rating === 'CORRECT' ? 'default' : 'outline'}
+              onClick={() => handleRating('CORRECT')}
+              className="min-w-[120px] bg-green-600 hover:bg-green-700 text-white"
+              style={rating === 'CORRECT' ? {} : { borderColor: '#10B981', color: '#10B981' }}
+            >
+              ✓ Got it Right
+            </Button>
+            <Button
+              variant={rating === 'INCORRECT' ? 'default' : 'outline'}
+              onClick={() => handleRating('INCORRECT')}
+              className="min-w-[120px] bg-red-600 hover:bg-red-700 text-white"
+              style={rating === 'INCORRECT' ? {} : { borderColor: '#EF4444', color: '#EF4444' }}
+            >
+              ✗ Got it Wrong
+            </Button>
           </div>
         </div>
       )}
