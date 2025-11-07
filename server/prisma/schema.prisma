@@ -1,0 +1,136 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  passwordHash  String
+  name          String
+  createdAt     DateTime  @default(now())
+  lastLogin     DateTime?
+  settings      String?
+
+  courses       Course[]
+  quizzes       Quiz[]
+  analytics     Analytics[]
+  shares        Share[]
+}
+
+model Course {
+  id            String    @id @default(uuid())
+  userId        String
+  name          String
+  description   String?
+  color         String    @default("#3B82F6")
+  icon          String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  archived      Boolean   @default(false)
+
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  materials     Material[]
+  quizzes       Quiz[]
+  analytics     Analytics[]
+}
+
+model Material {
+  id              String    @id @default(uuid())
+  courseId        String
+  type            String    // PDF, DOCX, URL
+  name            String
+  originalFilename String?
+  storagePath     String?
+  url             String?
+  contentText     String?
+  wordCount       Int?
+  pageCount       Int?
+  priority        String    @default("NONE") // HIGH, MEDIUM, LOW, NONE
+  customTags      String?   // JSON string array
+  uploadedAt      DateTime  @default(now())
+  lastScrapedAt   DateTime?
+  fileSize        Int?
+  metadata        String?   // JSON string
+
+  course          Course    @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  questions       Question[]
+}
+
+model Quiz {
+  id              String    @id @default(uuid())
+  courseId        String
+  userId          String
+  quizType        String    // FLASHCARD, MULTIPLE_CHOICE
+  difficulty      String    // EASY, MEDIUM, HARD, MIXED
+  questionCount   Int
+  topicFocus      String?
+  materialIds     String?   // JSON string array
+  createdAt       DateTime  @default(now())
+  completedAt     DateTime?
+  score           Float?
+  timeSpent       Int?
+
+  course          Course    @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  questions       Question[]
+}
+
+model Question {
+  id                String    @id @default(uuid())
+  quizId            String
+  materialId        String
+  questionText      String
+  questionType      String    // FLASHCARD, MULTIPLE_CHOICE
+  difficulty        String    // EASY, MEDIUM, HARD
+  correctAnswer     String
+  options           String?   // JSON string array
+  explanation       String
+  sourceReference   String?
+  flagged           Boolean   @default(false)
+  userNotes         String?
+  answeredCorrectly Boolean?
+  userAnswer        String?
+  attemptNumber     Int       @default(1)
+
+  quiz              Quiz      @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  material          Material  @relation(fields: [materialId], references: [id])
+}
+
+model Analytics {
+  id                  String    @id @default(uuid())
+  userId              String
+  courseId            String
+  date                DateTime  @default(now())
+  questionsAnswered   Int       @default(0)
+  correctAnswers      Int       @default(0)
+  quizAttempts        Int       @default(0)
+  studyTimeSeconds    Int       @default(0)
+  topicsCovered       String?   // JSON string array
+  difficultyBreakdown String?   // JSON string
+  masteryPercentage   Float?
+
+  user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course              Course    @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, courseId, date])
+}
+
+model Share {
+  id          String      @id @default(uuid())
+  userId      String
+  shareType   String      // COURSE, QUIZ
+  entityId    String
+  shareUrl    String      @unique
+  createdAt   DateTime    @default(now())
+  expiresAt   DateTime?
+  permissions String      @default("VIEW_ONLY") // VIEW_ONLY, COPYABLE
+  accessCount Int         @default(0)
+  active      Boolean     @default(true)
+
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
