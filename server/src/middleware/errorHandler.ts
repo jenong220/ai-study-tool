@@ -32,7 +32,8 @@ export const errorHandler = (
     
     return res.status(500).json({ 
       error: 'Database error occurred',
-      details: process.env.NODE_ENV === 'development' ? err.message : undefined
+      details: err.message,
+      code: prismaError.code
     });
   }
 
